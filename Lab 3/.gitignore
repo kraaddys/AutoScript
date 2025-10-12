@@ -1,0 +1,17 @@
+#Docker
+.env
+
+# Виртуальное окружение Python
+.venv/
+__pycache__/
+
+#Логи
+*.log
+logs/
+
+# Сгенерированные JSON-файлы (результаты работы скрипта)
+data/*.json
+
+# Системные файлы Windows/Mac
+Thumbs.db
+.DS_Store
