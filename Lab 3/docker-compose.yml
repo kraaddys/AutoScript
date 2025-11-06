@@ -4,10 +4,11 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: lab03-cron
+    env_file:
+      - .env
     environment:
       - TZ=Europe/Chisinau
-      - API_KEY=${API_KEY}   
-      - API_URL=${API_URL}
     volumes:
+      - ./data:/app/data
       - ./logs:/var/log
     restart: unless-stopped

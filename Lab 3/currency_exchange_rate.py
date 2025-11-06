@@ -55,13 +55,12 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         default=None,
         help="API key (overrides API_KEY env). If omitted, will try environment variable API_KEY.",
     )
-    parser.add_argument(
-        "--api-auth-mode",
-        default=os.getenv("API_AUTH_MODE", "form:key"),
-        help="Auth mode: form:key | form:api_key | header:bearer | query:key (default: env API_AUTH_MODE or 'form:key')",
-    )
-    return parser.parse_args(argv)
 
+    parser.add_argument(
+    "--api-auth-mode",
+    default=os.getenv("API_AUTH_MODE", "auto"),
+    help="Auth mode: auto | form:key | form:api_key | header:bearer | header:x-api-key | query:key | query:api_key",
+    )
 
 def validate_currency(code: str) -> str:
     if not re.fullmatch(r"[A-Z]{3}", code):
@@ -82,15 +81,15 @@ def parse_date(value: str) -> date:
 
 
 def fetch_rate(base: str, target: str, for_date: date, api_url: str, api_key: str, auth_mode: str) -> Dict[str, Any]:
-    """Call API with selectable auth mode."""
+    """Call API with selectable auth mode. In 'auto' mode send key in multiple places."""
     url = api_url.rstrip("/") + "/"
     params = {"from": base, "to": target, "date": for_date.isoformat()}
     headers: Dict[str, str] = {}
     data: Dict[str, str] = {}
 
-    # Нормализуем ключ (убираем пробелы/переводы строк/BOM)
-    api_key = (api_key or "").strip().strip("\ufeff")
-    mode = (auth_mode or "form:key").lower()
+    # Нормализуем ключ (убираем пробелы/переводы строк/BOM/CR)
+    api_key = (api_key or "").strip().strip("\ufeff").strip("\r")
+    mode = (auth_mode or "auto").lower()
 
     if mode == "form:key":
         data = {"key": api_key}
@@ -98,8 +97,20 @@ def fetch_rate(base: str, target: str, for_date: date, api_url: str, api_key: st
         data = {"api_key": api_key}
     elif mode == "header:bearer":
         headers["Authorization"] = f"Bearer {api_key}"
+    elif mode == "header:x-api-key":
+        headers["X-API-Key"] = api_key
     elif mode == "query:key":
         params["key"] = api_key
+    elif mode == "query:api_key":
+        params["api_key"] = api_key
+    elif mode == "auto":
+        # Отправляем ключ везде, где обычно его ждут
+        data = {"key": api_key, "api_key": api_key}
+        params.update({"key": api_key, "api_key": api_key})
+        headers.update({
+            "Authorization": f"Bearer {api_key}",
+            "X-API-Key": api_key,
+        })
     else:
         raise ValueError(f"Unknown API auth mode: {auth_mode}")
 
@@ -122,6 +133,7 @@ def fetch_rate(base: str, target: str, for_date: date, api_url: str, api_key: st
         raise RuntimeError(f"Unexpected API response: {payload}")
 
     return payload
+
 
 
 def save_json(base: str, target: str, for_date: date, payload: Dict[str, Any]) -> Path:
