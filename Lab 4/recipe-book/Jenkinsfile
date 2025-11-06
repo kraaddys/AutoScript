@@ -4,35 +4,32 @@ pipeline {
   stages {
     stage('Install Dependencies') {
       steps {
-        echo 'Подготовка проекта...'
-        sh '''
-          set -e
-          if [ -f composer.json ]; then
+        dir('Lab 4/recipe-book') {
+          echo 'Подготовка проекта...'
+          sh '''
+            set -e
             php -v
             curl -sS https://getcomposer.org/installer -o composer-setup.php
             php composer-setup.php --install-dir=/usr/local/bin --filename=composer
             composer install --no-interaction --prefer-dist
-          else
-            echo "composer.json не найден — пропускаем установку"
-          fi
-        '''
+          '''
+        }
       }
     }
+
     stage('Test') {
       steps {
-        echo 'Запуск тестов...'
-        sh '''
-          set -e
-          if [ -x vendor/bin/phpunit ] || [ -f phpunit.xml ] || [ -f phpunit.xml.dist ]; then
-            vendor/bin/phpunit --configuration phpunit.xml || vendor/bin/phpunit
-          else
-            echo "PHPUnit не найден — добавьте composer.json и phpunit.xml"
-            exit 1
-          fi
-        '''
+        dir('Lab 4/recipe-book') {
+          echo 'Запуск тестов...'
+          sh '''
+            set -e
+            vendor/bin/phpunit --configuration phpunit.xml
+          '''
+        }
       }
     }
   }
+
   post {
     always { echo 'Конвейер завершен.' }
     success { echo 'Все этапы прошли успешно!' }
