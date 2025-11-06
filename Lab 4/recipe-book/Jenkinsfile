@@ -9,9 +9,12 @@ pipeline {
           sh '''
             set -e
             php -v
+            # Ставим composer локально в проект
             curl -sS https://getcomposer.org/installer -o composer-setup.php
-            php composer-setup.php --install-dir=/usr/local/bin --filename=composer
-            composer install --no-interaction --prefer-dist
+            php composer-setup.php --filename=composer.phar
+            php composer.phar --version
+            # Устанавливаем зависимости
+            php composer.phar install --no-interaction --prefer-dist
           '''
         }
       }
@@ -23,7 +26,7 @@ pipeline {
           echo 'Запуск тестов...'
           sh '''
             set -e
-            vendor/bin/phpunit --configuration phpunit.xml
+            ./vendor/bin/phpunit --configuration phpunit.xml
           '''
         }
       }
